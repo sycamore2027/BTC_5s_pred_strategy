@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BTC 5s Alpha Mispricing Strategy</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">BTC Prediction Market Strategy</p>
+          <h1>Trade the next 5 seconds, not the final 15 minutes.</h1>
+          <p class="hero-text">
+            This site documents our BTC Polymarket strategy built on paper-style
+            relative features, a fair-value signal model, strict entry/exit
+            rules, and a full blotter plus ledger workflow.
+          </p>
+        </div>
+        <div class="hero-panel">
+          <div class="status-row">
+            <span class="status-label">Live-style monitor</span>
+            <span id="status-pill" class="status-pill">Loading</span>
+          </div>
+          <dl class="hero-metrics">
+            <div>
+              <dt>Chosen Theta</dt>
+              <dd id="hero-theta">-</dd>
+            </div>
+            <div>
+              <dt>Profit / Stop</dt>
+              <dd id="hero-exits">-</dd>
+            </div>
+            <div>
+              <dt>Timeout</dt>
+              <dd id="hero-timeout">-</dd>
+            </div>
+            <div>
+              <dt>Out-of-sample Trades</dt>
+              <dd id="hero-trades">-</dd>
+            </div>
+          </dl>
+        </div>
+      </header>
+
+      <main>
+        <section class="section">
+          <div class="section-heading">
+            <p class="eyebrow">Strategy Logic</p>
+            <h2>Entry Orders</h2>
+          </div>
+          <div class="card-grid card-grid-3">
+            <article class="card">
+              <h3>Signal</h3>
+              <p>
+                We define the alpha signal as
+                <code>&alpha; = p<sub>model</sub> - p<sub>market</sub></code>.
+                In code, <code>p_model</code> is the model-implied fair value of
+                the UP contract 5 seconds ahead, and
+                <code>p_market</code> is the current UP mid price.
+              </p>
+              <div class="formula-box">
+                <div>If <span id="theta-formula">α &gt; 0.04</span>: Buy UP</div>
+                <div>If <span id="theta-formula-down">α &lt; -0.04</span>: Buy DOWN</div>
+                <div>Else: Stay flat</div>
+              </div>
+            </article>
+            <article class="card">
+              <h3>Parameter Choice</h3>
+              <p id="entry-parameter-text">
+                We selected the entry threshold by validation search. The chosen
+                value is large enough to filter micro-noise but still frequent
+                enough to produce a meaningful trade sample.
+              </p>
+              <ul class="key-points">
+                <li>Threshold tuned on validation, then frozen for the test set.</li>
+                <li>Higher theta reduced churn and fee drag.</li>
+                <li>Position size stays fixed at $100 notional per trade.</li>
+              </ul>
+            </article>
+            <article class="card">
+              <h3>Market Phenomenon</h3>
+              <p>
+                We are trying to capture delayed probability updates, thin
+                liquidity, and short-lived order-book imbalances. The bet is not
+                on the final 15-minute outcome itself; it is on the market
+                repricing toward fair value over the next few seconds.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-heading">
+            <p class="eyebrow">Risk Controls</p>
+            <h2>Exit Orders</h2>
+          </div>
+          <div class="card-grid card-grid-4">
+            <article class="card small-card">
+              <h3>Success</h3>
+              <p>
+                Close the trade once price moves in our favor by the profit
+                target.
+              </p>
+              <strong id="profit-target">-</strong>
+            </article>
+            <article class="card small-card">
+              <h3>Stop-loss</h3>
+              <p>
+                Cut the position quickly when the signal is wrong and the market
+                moves against us.
+              </p>
+              <strong id="stop-loss">-</strong>
+            </article>
+            <article class="card small-card">
+              <h3>Timeout</h3>
+              <p>
+                If neither target nor stop is hit, we force-close because the
+                5-second edge decays fast.
+              </p>
+              <strong id="timeout-seconds">-</strong>
+            </article>
+            <article class="card small-card">
+              <h3>Why This Mix</h3>
+              <p>
+                The validation search favored a tighter stop than target,
+                consistent with a short-horizon microstructure strategy that
+                needs to cap wrong-way drift quickly.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-heading">
+            <p class="eyebrow">Backtest</p>
+            <h2>Validation vs Test Performance</h2>
+          </div>
+          <div class="card-grid card-grid-2">
+            <article class="card">
+              <div class="panel-title-row">
+                <h3>Validation Summary</h3>
+                <span class="panel-pill positive">Model Selection Window</span>
+              </div>
+              <div id="validation-metrics" class="metric-grid"></div>
+            </article>
+            <article class="card">
+              <div class="panel-title-row">
+                <h3>Test Summary</h3>
+                <span class="panel-pill warning">Frozen Parameters</span>
+              </div>
+              <div id="test-metrics" class="metric-grid"></div>
+            </article>
+          </div>
+
+          <div class="card-grid card-grid-3 top-gap">
+            <article class="card">
+              <h3>Exit Distribution</h3>
+              <div id="exit-bars" class="bar-stack"></div>
+            </article>
+            <article class="card">
+              <h3>Data Footprint</h3>
+              <div id="data-overview" class="stacked-stats"></div>
+            </article>
+            <article class="card">
+              <h3>Signal Engine</h3>
+              <p>
+                The repo includes the paper LSTM scaffolding, while this
+                backtest uses the paper’s relative feature set with a fast
+                gradient-boosted fair-value proxy. The trading layer is
+                model-agnostic, so the same entry/exit engine can consume future
+                LSTM predictions.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-heading">
+            <p class="eyebrow">Ledger</p>
+            <h2>Capital Curve & Rolling Diagnostics</h2>
+          </div>
+          <div class="card-grid card-grid-2">
+            <article class="card">
+              <h3>Capital After Each Closed Trade</h3>
+              <div id="capital-chart" class="chart"></div>
+            </article>
+            <article class="card">
+              <h3>Rolling Sharpe (30 Trades)</h3>
+              <div id="sharpe-chart" class="chart"></div>
+            </article>
+            <article class="card">
+              <h3>Rolling Expected Return</h3>
+              <div id="return-chart" class="chart"></div>
+            </article>
+            <article class="card">
+              <h3>Monitoring Thresholds</h3>
+              <div id="monitoring-cards" class="stacked-stats"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-heading">
+            <p class="eyebrow">Blotter & Ledger</p>
+            <h2>Trade Records</h2>
+          </div>
+          <div class="download-row">
+            <a class="download-link" href="./site_data/blotter.csv">Download Full Blotter CSV</a>
+            <a class="download-link" href="./site_data/ledger.csv">Download Full Ledger CSV</a>
+          </div>
+          <div class="card-grid card-grid-2">
+            <article class="card table-card">
+              <div class="panel-title-row">
+                <h3>Blotter Preview</h3>
+                <span class="panel-pill">Trade-level</span>
+              </div>
+              <div id="blotter-table" class="table-wrap"></div>
+            </article>
+            <article class="card table-card">
+              <div class="panel-title-row">
+                <h3>Ledger Preview</h3>
+                <span class="panel-pill">Portfolio-level</span>
+              </div>
+              <div id="ledger-table" class="table-wrap"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-heading">
+            <p class="eyebrow">Monitoring & Failure Detection</p>
+            <h2>How We Know When the Strategy Is Working</h2>
+          </div>
+          <div class="card-grid card-grid-2">
+            <article class="card">
+              <h3>On-track Conditions</h3>
+              <p>
+                Going forward, we compare live rolling performance to the
+                validation window used to select the parameters. If rolling
+                Sharpe, rolling expected return per trade, and rolling win rate
+                remain above their validation floors, the strategy is behaving
+                in line with the backtest.
+              </p>
+              <div id="on-track-summary" class="monitor-box"></div>
+            </article>
+            <article class="card">
+              <h3>Failure Conditions</h3>
+              <p>
+                We treat the strategy as broken if rolling performance drops
+                below those floors, if returns stay negative for an extended
+                block of trades, or if fee-adjusted PnL keeps decaying. When
+                triggered, the next actions are to reduce size, pause trading,
+                and retrain or recalibrate the signal model.
+              </p>
+              <ul class="key-points">
+                <li>Rolling Sharpe below benchmark floor.</li>
+                <li>Rolling expected return below benchmark floor.</li>
+                <li>Rolling win rate below benchmark floor.</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>
