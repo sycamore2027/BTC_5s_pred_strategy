@@ -7,4 +7,8 @@ __pycache__/
 .venv/
 venv/
 
-site_data/
+site_data/*
+!site_data/
+!site_data/summary.json
+!site_data/blotter.csv
+!site_data/ledger.csv
